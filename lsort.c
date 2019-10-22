@@ -1,8 +1,11 @@
-// sort an almost-sorted file in-place
+// Copyright (c) 2019 Daniel Frey
+// Please see LICENSE for license or visit https://github.com/d-frey/lsort/
 
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,36 +13,39 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+char* prg;
+
 void print_version()
 {
-   puts( "lsort 0.0.1" );
+   fprintf( stdout, "%s 0.0.1", prg );
 }
 
 void print_help()
 {
-   puts( "Usage: lsort [OPTION]... FILE\n"
-         "Sort an almost-sorted FILE, works in-place\n"
-         "\n"
-         "  -c, --compare N            compare no more than N characters per line\n"
-         "  -d, --distance N           maximum allowed shift distance\n"
-         "\n"
-         "  -v, --verbose              show progress and statistics\n"
-         "  -V, --version              print program version\n"
-         "  -?, --help                 give this help list\n"
-         "\n"
-         "Mandatory or optional arguments to long options are also mandatory or optional\n"
-         "for any corresponding short options.\n"
-         "\n"
-         "Report bugs to d.frey@gmx.de." );
+   fprintf( stdout, "Usage: %s [OPTION]... FILE\n"
+                    "Sort an almost-sorted FILE, works in-place\n"
+                    "\n"
+                    "  -c, --compare N            compare no more than N characters per line\n"
+                    "  -d, --distance N           maximum allowed shift distance\n"
+                    "\n"
+                    "  -v, --verbose              show progress and statistics\n"
+                    "  -V, --version              print program version\n"
+                    "  -?, --help                 give this help list\n"
+                    "\n"
+                    "Mandatory or optional arguments to long options are also mandatory or optional\n"
+                    "for any corresponding short options.\n"
+                    "\n"
+                    "Report bugs to d.frey@gmx.de.",
+            prg );
 }
 
-int compare = 0;
-int distance = 0;
+size_t compare = 0;
+size_t distance = 0;
 
 size_t calccmpsize( size_t a, size_t b )
 {
    size_t m = ( a < b ) ? a : b;
-   if( compare > 0 && m > (size_t)compare ) {
+   if( compare > 0 && m > compare ) {
       return compare;
    }
    return m;
@@ -75,8 +81,26 @@ char* rfind( char* data, char* prev )
    return data;
 }
 
+size_t parse( char* p )
+{
+   char* endptr;
+   errno = 0;
+   size_t result = strtoul( p, &endptr, 0 );
+   if( ( errno == ERANGE && result == ULONG_MAX ) || ( errno != 0 && result == 0 ) ) {
+      perror( prg );
+      exit( EXIT_FAILURE );
+   }
+   if( !isdigit( *p ) || *endptr != '\0' ) {
+      fprintf( stderr, "%s: Argument requires an unsigned number, got '%s'\n", prg, p );
+      exit( EXIT_FAILURE );
+   }
+   return result;
+}
+
 int main( int argc, char** argv )
 {
+   prg = argv[ 0 ];
+
    static struct option long_options[] = {
       { "compare", required_argument, NULL, 'c' },
       { "distance", required_argument, NULL, 'd' },
@@ -89,11 +113,12 @@ int main( int argc, char** argv )
    int long_index = 0;
    while( ( opt = getopt_long( argc, argv, "c:d:vVh?", long_options, &long_index ) ) != -1 ) {
       switch( opt ) {
-         case 'c':
-            compare = atoi( optarg );
+         case 'c': {
+            compare = parse( optarg );
             break;
+         }
          case 'd':
-            distance = atoi( optarg );
+            distance = parse( optarg );
             break;
          case 'V':
             print_version();
@@ -108,7 +133,7 @@ int main( int argc, char** argv )
    }
 
    if( optind != ( argc - 1 ) ) {
-      fprintf( stderr, "%s: missing FILE\nTry '%s --help' for more information.\n", argv[ 0 ], argv[ 0 ] );
+      fprintf( stderr, "%s: Missing FILE\nTry '%s --help' for more information.\n", argv[ 0 ], argv[ 0 ] );
       exit( EXIT_FAILURE );
    }
 
@@ -162,13 +187,13 @@ int main( int argc, char** argv )
             ts = s + 1;
             tmp = (char*)realloc( tmp, ts );
             if( tmp == NULL ) {
-               fprintf( stderr, "%s: out of memory\n", argv[ 0 ] );
+               fprintf( stderr, "%s: Out of memory\n", argv[ 0 ] );
                exit( EXIT_FAILURE );
             }
          }
          size_t final = current - prev;
-         if( distance != 0 && final > (size_t)distance ) {
-            fprintf( stderr, "%s: required distance of %lu exceeds allowed distance of %i\n", argv[ 0 ], final, distance );
+         if( distance != 0 && final > distance ) {
+            fprintf( stderr, "%s: Required distance of %lu exceeds allowed distance of %lu\n", argv[ 0 ], final, distance );
             exit( EXIT_FAILURE );
          }
          memcpy( tmp, current, s );
