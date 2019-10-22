@@ -9,12 +9,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-inline int min( int a, int b )
+int min( int a, int b )
 {
    return ( a < b ) ? a : b;
 }
 
-inline char* find( char* pos, char* end )
+char* find( char* pos, char* end )
 {
    char* result = (char*)memchr( pos, '\n', end - pos );
    if( result != NULL ) {
@@ -23,22 +23,23 @@ inline char* find( char* pos, char* end )
    return end;
 }
 
-inline void* memrchr( void* s, int c, size_t n )
+void* memrchr( void* s, int c, size_t n )
 {
    if( n != 0 ) {
-      const unsigned char* cp = (unsigned char*)s + n;
+      unsigned char* cp = (unsigned char*)s + n;
       do {
          if( *( --cp ) == (unsigned char)c )
-            return (void*)cp;
+            return cp;
       } while( --n != 0 );
    }
-   return (void*)NULL;
+   return NULL;
 }
 
 int main( int argc, char** argv )
 {
    // TODO: Check # of arguments, print usage, help, version...
    char* filename = argv[ 1 ];
+   (void)argv;
 
    errno = 0;
    int fd = open( filename, O_RDWR );
