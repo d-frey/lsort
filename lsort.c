@@ -17,10 +17,11 @@ void print_version()
 
 void print_help()
 {
-   puts( "Usage: lsort [OPTION] FILE\n"
+   puts( "Usage: lsort [OPTION]... FILE\n"
+         "Sort an almost-sorted FILE, works in-place\n"
          "\n"
          "  -c, --compare N            compare no more than N characters per line\n"
-         "  -d, --distance N           allow maximum distance of N bytes for swapping lines\n"
+         "  -d, --distance N           maximum allowed shift distance\n"
          "\n"
          "  -v, --verbose              show progress and statistics\n"
          "  -V, --version              print program version\n"
