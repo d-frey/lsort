@@ -17,7 +17,7 @@ char* prg;
 
 void print_version()
 {
-   fprintf( stdout, "%s 0.0.1", prg );
+   fprintf( stdout, "%s 0.0.1\n", prg );
 }
 
 void print_help()
@@ -35,7 +35,7 @@ void print_help()
                     "Mandatory or optional arguments to long options are also mandatory or optional\n"
                     "for any corresponding short options.\n"
                     "\n"
-                    "Report bugs to d.frey@gmx.de.",
+                    "Report bugs to d.frey@gmx.de.\n",
             prg );
 }
 
