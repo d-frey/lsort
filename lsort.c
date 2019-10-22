@@ -9,18 +9,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-int min( int a, int b )
+size_t min( size_t a, size_t b )
 {
    return ( a < b ) ? a : b;
-}
-
-char* find( char* pos, char* end )
-{
-   char* result = (char*)memchr( pos, '\n', end - pos );
-   if( result != NULL ) {
-      return ++result;
-   }
-   return end;
 }
 
 void* memrchr( void* s, int c, size_t n )
@@ -35,16 +26,35 @@ void* memrchr( void* s, int c, size_t n )
    return NULL;
 }
 
+char* find( char* pos, char* end )
+{
+   char* result = (char*)memchr( pos, '\n', end - pos );
+   if( result != NULL ) {
+      return ++result;
+   }
+   return end;
+}
+
+char* rfind( char* data, char* prev )
+{
+   char* result = (char*)memchr( data, '\n', prev - data - 1 );
+   if( result != NULL ) {
+      return ++result;
+   }
+   return data;
+}
+
 int main( int argc, char** argv )
 {
    // TODO: Check # of arguments, print usage, help, version...
    char* filename = argv[ 1 ];
-   (void)argv;
+   (void)argc;
 
    errno = 0;
    int fd = open( filename, O_RDWR );
    if( fd < 0 ) {
       perror( filename );
+      puts( "open() failed" );
       exit( 1 );
    }
 
@@ -52,10 +62,11 @@ int main( int argc, char** argv )
    errno = 0;
    if( fstat( fd, &st ) < 0 ) {
       perror( filename );
+      puts( "fstat() failed" );
       exit( 1 );
    }
 
-   int size = st.st_size;
+   size_t size = st.st_size;
    if( size == 0 ) {
       return 0;
    }
@@ -63,6 +74,7 @@ int main( int argc, char** argv )
    char* data = (char*)mmap( NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0 );
    if( data == (void*)-1 ) {
       perror( filename );
+      puts( "mmap() failed" );
       exit( 1 );
    }
 
@@ -70,19 +82,13 @@ int main( int argc, char** argv )
    char* prev = data;
    char* current = find( prev, end );
    char* tmp = NULL;
-   int ts = 0;
+   size_t ts = 0;
 
    while( current != end ) {
       char* next = find( current, end );
       if( memcmp( prev, current, min( current - prev, next - current ) ) > 0 ) {
          while( prev != data ) {
-            char* peek = (char*)memrchr( data, '\n', prev - data - 1 );
-            if( peek == NULL ) {
-               peek = data;
-            }
-            else {
-               ++peek;
-            }
+            char* peek = rfind( data, prev );
             if( memcmp( peek, current, min( prev - peek, next - current ) ) > 0 ) {
                prev = peek;
             }
@@ -90,7 +96,7 @@ int main( int argc, char** argv )
                break;
             }
          }
-         int s = next - current;
+         size_t s = next - current;
          if( s + 1 > ts ) {
             ts = s + 1;
             tmp = (char*)realloc( tmp, ts );
@@ -105,9 +111,14 @@ int main( int argc, char** argv )
          }
          memmove( prev + s, prev, current - prev - 1 );
          memcpy( prev, tmp, s );
+         msync( prev, next - prev, MS_ASYNC );
+         current = next - ( current - prev );
+         prev = rfind( data, current );
       }
-      prev = current;
-      current = next;
+      else {
+         prev = current;
+         current = next;
+      }
    }
 
    munmap( data, size );
