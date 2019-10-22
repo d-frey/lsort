@@ -1,7 +1,5 @@
 // sort an almost-sorted file in-place
 
-#define _GNU_SOURCE
-
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -23,6 +21,18 @@ inline char* find( char* pos, char* end )
       return ++result;
    }
    return end;
+}
+
+inline void* memrchr( void* s, int c, size_t n )
+{
+   if( n != 0 ) {
+      const unsigned char* cp = (unsigned char*)s + n;
+      do {
+         if( *( --cp ) == (unsigned char)c )
+            return (void*)cp;
+      } while( --n != 0 );
+   }
+   return (void*)NULL;
 }
 
 int main( int argc, char** argv )
