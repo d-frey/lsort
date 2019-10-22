@@ -127,13 +127,13 @@ int main( int argc, char** argv )
             print_help();
             exit( EXIT_SUCCESS );
          default:
-            fprintf( stderr, "Try '%s --help' for more information.\n", argv[ 0 ] );
+            fprintf( stderr, "Try '%s --help' for more information.\n", prg );
             exit( EXIT_FAILURE );
       }
    }
 
    if( optind != ( argc - 1 ) ) {
-      fprintf( stderr, "%s: Missing FILE\nTry '%s --help' for more information.\n", argv[ 0 ], argv[ 0 ] );
+      fprintf( stderr, "%s: Missing FILE\nTry '%s --help' for more information.\n", prg, prg );
       exit( EXIT_FAILURE );
    }
 
@@ -187,13 +187,13 @@ int main( int argc, char** argv )
             ts = s + 1;
             tmp = (char*)realloc( tmp, ts );
             if( tmp == NULL ) {
-               fprintf( stderr, "%s: Out of memory\n", argv[ 0 ] );
+               fprintf( stderr, "%s: Out of memory\n", prg );
                exit( EXIT_FAILURE );
             }
          }
          size_t final = current - prev;
          if( distance != 0 && final > distance ) {
-            fprintf( stderr, "%s: Required distance of %lu exceeds allowed distance of %lu\n", argv[ 0 ], final, distance );
+            fprintf( stderr, "%s: Required distance of %lu exceeds allowed distance of %lu\n", prg, final, distance );
             exit( EXIT_FAILURE );
          }
          memcpy( tmp, current, s );
