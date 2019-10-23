@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,7 +48,7 @@ int quiet = 0;
 size_t calccmpsize( size_t a, size_t b )
 {
    size_t m = ( a < b ) ? a : b;
-   if( compare > 0 && m > compare ) {
+   if( ( compare > 0 ) && ( m > compare ) ) {
       return compare;
    }
    return m;
@@ -90,19 +91,29 @@ size_t parse( char* p )
    char* endptr;
    errno = 0;
    size_t result = strtoul( p, &endptr, 0 );
-   if( ( errno == ERANGE && result == ULONG_MAX ) || ( errno != 0 && result == 0 ) ) {
+   if( ( ( errno == ERANGE ) && ( result == ULONG_MAX ) ) || ( ( errno != 0 ) && ( result == 0 ) ) ) {
       perror( prg );
       exit( EXIT_FAILURE );
    }
-   if( !isdigit( *p ) || *endptr != '\0' ) {
+   if( !isdigit( *p ) || ( *endptr != '\0' ) ) {
       fprintf( stderr, "%s: Argument requires an unsigned number, got '%s'\n", prg, p );
       exit( EXIT_FAILURE );
    }
    return result;
 }
 
+volatile sig_atomic_t status = 0;
+
+void stop( int signal )
+{
+   status = signal;
+}
+
 int main( int argc, char** argv )
 {
+   signal( SIGTERM, stop );
+   signal( SIGINT, stop );
+
    prg = argv[ 0 ];
    quiet = !isatty( fileno( stdout ) );
 
@@ -145,7 +156,7 @@ int main( int argc, char** argv )
       exit( EXIT_FAILURE );
    }
 
-   while( optind < argc ) {
+   while( ( status == 0 ) && ( optind < argc ) ) {
       char* filename = argv[ optind++ ];
 
       errno = 0;
@@ -181,19 +192,20 @@ int main( int argc, char** argv )
       size_t pc = 1000;
       size_t cnt = 0;
 
-      while( current != end ) {
+      while( ( status == 0 ) && ( current != end ) ) {
          if( !quiet && ( ( cnt++ % 65536 ) == 0 ) ) {
             size_t npc = 100 * ( current - data ) / ( end - data );
             if( npc != pc ) {
                fprintf( stdout, "\r%s... %lu%%", filename, npc );
                fflush( stdout );
+               sleep( 1 );
                pc = npc;
             }
          }
 
          char* next = find( current, end );
          if( memcmp( prev, current, calccmpsize( current - prev, next - current ) ) > 0 ) {
-            while( prev != data ) {
+            while( ( status == 0 ) && ( prev != data ) ) {
                char* peek = rfind( data, prev );
                if( memcmp( peek, current, calccmpsize( prev - peek, next - current ) ) > 0 ) {
                   prev = peek;
@@ -215,7 +227,7 @@ int main( int argc, char** argv )
                }
             }
             size_t final = current - prev;
-            if( distance != 0 && final > distance ) {
+            if( ( distance != 0 ) && ( final > distance ) ) {
                if( !quiet ) {
                   putchar( '\n' );
                }
@@ -241,9 +253,17 @@ int main( int argc, char** argv )
       munmap( data, size );
       close( fd );
 
-      if( !quiet ) {
+      if( ( status == 0 ) && !quiet ) {
          fprintf( stdout, "\r%s... done\n", filename );
       }
+   }
+
+   if( status != 0 ) {
+      if( !quiet ) {
+         putchar( '\n' );
+      }
+      fprintf( stderr, "%s: ABORTED\n", prg );
+      return EXIT_FAILURE;
    }
 
    return EXIT_SUCCESS;
