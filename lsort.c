@@ -26,18 +26,21 @@ void print_help()
    fprintf( stdout, "Usage: %s [OPTION]... FILE...\n"
                     "Sort almost-sorted FILE(s), works in-place\n"
                     "\n"
-                    "OPTIONs\n"
+                    "Options:\n"
                     "  -c, --compare N            compare no more than N characters per line\n"
-                    "  -d, --distance N           maximum allowed shift distance\n"
+                    "  -d, --distance N           maximum shift distance in bytes, default: 1M\n"
                     "\n"
                     "  -q, --quiet                suppress progress output\n"
                     "  -V, --version              print program version\n"
                     "  -?, --help                 give this help list\n"
                     "\n"
-                    "Mandatory or optional arguments to long options are also mandatory or optional\n"
-                    "for any corresponding short options.\n"
+                    "N may be followed by the following multiplicative suffixes:\n"
+                    "B=1, K=1024, and so on for M, G, T, P, E.\n"
                     "\n"
-                    "Report bugs to d.frey@gmx.de.\n",
+                    "By default, --compare is 0, meaning no limit when comparing lines.\n"
+                    "A non-zero value for --compare may result in non-sorted files.\n"
+                    "\n"
+                    "Report bugs to: <https://github.com/d-frey/lsort/>\n",
             prg );
 }
 
@@ -88,15 +91,53 @@ char* rfind( char* data, char* prev )
 
 size_t parse( char* p )
 {
+   if( !isdigit( *p ) ) {
+      fprintf( stderr, "%s: Invalid argument '%s'\n", prg, p );
+      exit( EXIT_FAILURE );
+   }
    char* endptr;
    errno = 0;
-   size_t result = strtoul( p, &endptr, 0 );
-   if( ( ( errno == ERANGE ) && ( result == ULONG_MAX ) ) || ( ( errno != 0 ) && ( result == 0 ) ) ) {
+   size_t n = strtoul( p, &endptr, 10 );
+   if( ( ( errno == ERANGE ) && ( n == ULONG_MAX ) ) || ( ( errno != 0 ) && ( n == 0 ) ) ) {
       perror( prg );
       exit( EXIT_FAILURE );
    }
-   if( !isdigit( *p ) || ( *endptr != '\0' ) ) {
-      fprintf( stderr, "%s: Argument requires an unsigned number, got '%s'\n", prg, p );
+   size_t f = 1;
+   switch( *endptr ) {
+      case '\0':
+         break;
+      case 'E':
+         f *= 1024;
+         // fall-through
+      case 'P':
+         f *= 1024;
+         // fall-through
+      case 'T':
+         f *= 1024;
+         // fall-through
+      case 'G':
+         f *= 1024;
+         // fall-through
+      case 'M':
+         f *= 1024;
+         // fall-through
+      case 'k':
+      case 'K':
+         f *= 1024;
+         // fall-through
+      case 'b':
+      case 'B':
+         ++endptr;
+         break;
+   }
+   if( *endptr != '\0' ) {
+      fprintf( stderr, "%s: Invalid argument '%s'\n", prg, p );
+      exit( EXIT_FAILURE );
+   }
+   size_t result = n * f;
+   if( result / f != n ) {
+      errno = ERANGE;
+      perror( prg );
       exit( EXIT_FAILURE );
    }
    return result;
@@ -122,13 +163,13 @@ int main( int argc, char** argv )
       { "distance", required_argument, NULL, 'd' },
       { "quiet", no_argument, NULL, 'q' },
       { "version", no_argument, NULL, 'V' },
-      { "help", no_argument, NULL, 'h' },
+      { "help", no_argument, NULL, '?' },
       { NULL, 0, NULL, 0 }
    };
 
    int opt = 0;
    int long_index = 0;
-   while( ( opt = getopt_long( argc, argv, "c:d:qVh?", long_options, &long_index ) ) != -1 ) {
+   while( ( opt = getopt_long( argc, argv, "c:d:qV?", long_options, &long_index ) ) != -1 ) {
       switch( opt ) {
          case 'c':
             compare = parse( optarg );
@@ -142,7 +183,7 @@ int main( int argc, char** argv )
          case 'V':
             print_version();
             return EXIT_SUCCESS;
-         case 'h':
+         case '?':
             print_help();
             return EXIT_SUCCESS;
          default:
