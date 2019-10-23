@@ -51,6 +51,7 @@ size_t calccmpsize( size_t a, size_t b )
    return m;
 }
 
+#ifndef _GNU_SOURCE
 void* memrchr( void* s, int c, size_t n )
 {
    if( n != 0 ) {
@@ -62,6 +63,7 @@ void* memrchr( void* s, int c, size_t n )
    }
    return NULL;
 }
+#endif
 
 char* find( char* pos, char* end )
 {
@@ -74,7 +76,7 @@ char* find( char* pos, char* end )
 
 char* rfind( char* data, char* prev )
 {
-   char* result = (char*)memchr( data, '\n', prev - data - 1 );
+   char* result = (char*)memrchr( data, '\n', prev - data - 1 );
    if( result != NULL ) {
       return ++result;
    }
@@ -122,10 +124,10 @@ int main( int argc, char** argv )
             break;
          case 'V':
             print_version();
-            exit( EXIT_SUCCESS );
+            return EXIT_SUCCESS;
          case 'h':
             print_help();
-            exit( EXIT_SUCCESS );
+            return EXIT_SUCCESS;
          default:
             fprintf( stderr, "Try '%s --help' for more information.\n", prg );
             exit( EXIT_FAILURE );
@@ -155,7 +157,7 @@ int main( int argc, char** argv )
 
    size_t size = st.st_size;
    if( size == 0 ) {
-      return 0;
+      return EXIT_SUCCESS;
    }
 
    char* data = (char*)mmap( NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0 );
@@ -214,4 +216,6 @@ int main( int argc, char** argv )
 
    munmap( data, size );
    close( fd );
+
+   return EXIT_SUCCESS;
 }
