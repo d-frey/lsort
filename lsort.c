@@ -170,17 +170,23 @@ int main( int argc, char** argv )
       errno = 0;
       if( fstat( fd, &st ) < 0 ) {
          perror( filename );
+         close( fd );
          exit( EXIT_FAILURE );
       }
 
       size_t size = st.st_size;
       if( size == 0 ) {
-         return EXIT_SUCCESS;
+         if( !quiet ) {
+            fprintf( stdout, "%s: done\n", filename );
+         }
+         close( fd );
+         continue;
       }
 
       char* data = (char*)mmap( NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0 );
       if( data == (void*)-1 ) {
          perror( filename );
+         close( fd );
          exit( EXIT_FAILURE );
       }
 
@@ -196,9 +202,8 @@ int main( int argc, char** argv )
          if( !quiet && ( ( cnt++ % 65536 ) == 0 ) ) {
             size_t npc = 100 * ( current - data ) / ( end - data );
             if( npc != pc ) {
-               fprintf( stdout, "\r%s... %lu%%", filename, npc );
+               fprintf( stdout, "\r%s: %lu%%", filename, npc );
                fflush( stdout );
-               sleep( 1 );
                pc = npc;
             }
          }
@@ -223,6 +228,8 @@ int main( int argc, char** argv )
                      putchar( '\n' );
                   }
                   fprintf( stderr, "%s: Out of memory\n", prg );
+                  munmap( data, size );
+                  close( fd );
                   exit( EXIT_FAILURE );
                }
             }
@@ -232,6 +239,8 @@ int main( int argc, char** argv )
                   putchar( '\n' );
                }
                fprintf( stderr, "%s: Required distance of %lu exceeds allowed distance of %lu\n", prg, final, distance );
+               munmap( data, size );
+               close( fd );
                exit( EXIT_FAILURE );
             }
             memcpy( tmp, current, s );
@@ -254,7 +263,7 @@ int main( int argc, char** argv )
       close( fd );
 
       if( ( status == 0 ) && !quiet ) {
-         fprintf( stdout, "\r%s... done\n", filename );
+         fprintf( stdout, "\r%s: done\n", filename );
       }
    }
 
