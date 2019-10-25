@@ -44,10 +44,6 @@ void print_help()
             prg );
 }
 
-size_t compare = 0;
-size_t distance = 0;
-int quiet = 0;
-
 size_t zmin( size_t a, size_t b )
 {
    return ( a == 0 ) ? b : ( ( a < b ) ? a : b );
@@ -158,6 +154,10 @@ int main( int argc, char** argv )
 {
    signal( SIGTERM, stop );
    signal( SIGINT, stop );
+
+   size_t compare = 0;
+   size_t distance = 0;
+   int quiet = 0;
 
    prg = argv[ 0 ];
    quiet = !isatty( fileno( stdout ) );
