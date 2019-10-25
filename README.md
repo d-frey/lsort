@@ -7,8 +7,8 @@ Options:
   -d, --distance N           maximum shift distance in bytes, default: 1M
 
   -q, --quiet                suppress progress output
-  -V, --version              print program version
-  -?, --help                 give this help list
+      --help                 display this help and exit
+      --version              output version information and exit
 
 N may be followed by the following multiplicative suffixes:
 B=1, K=1024, and so on for M, G, T, P, E.

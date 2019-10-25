@@ -31,8 +31,8 @@ void print_help()
                     "  -d, --distance N           maximum shift distance in bytes, default: 1M\n"
                     "\n"
                     "  -q, --quiet                suppress progress output\n"
-                    "  -V, --version              print program version\n"
-                    "  -?, --help                 give this help list\n"
+                    "      --help                 display this help and exit\n"
+                    "      --version              output version information and exit\n"
                     "\n"
                     "N may be followed by the following multiplicative suffixes:\n"
                     "B=1, K=1024, and so on for M, G, T, P, E.\n"
@@ -121,11 +121,9 @@ size_t parse( char* p )
       case 'M':
          f *= 1024;
          // fall-through
-      case 'k':
       case 'K':
          f *= 1024;
          // fall-through
-      case 'b':
       case 'B':
          ++endptr;
          break;
@@ -162,14 +160,14 @@ int main( int argc, char** argv )
       { "compare", required_argument, NULL, 'c' },
       { "distance", required_argument, NULL, 'd' },
       { "quiet", no_argument, NULL, 'q' },
-      { "version", no_argument, NULL, 'V' },
-      { "help", no_argument, NULL, '?' },
+      { "help", no_argument, NULL, 0 },
+      { "version", no_argument, NULL, 0 },
       { NULL, 0, NULL, 0 }
    };
 
    int opt = 0;
    int long_index = 0;
-   while( ( opt = getopt_long( argc, argv, "c:d:qV?", long_options, &long_index ) ) != -1 ) {
+   while( ( opt = getopt_long( argc, argv, "c:d:q", long_options, &long_index ) ) != -1 ) {
       switch( opt ) {
          case 'c':
             compare = parse( optarg );
@@ -180,12 +178,18 @@ int main( int argc, char** argv )
          case 'q':
             quiet = 1;
             break;
-         case 'V':
-            print_version();
-            return EXIT_SUCCESS;
-         case '?':
-            print_help();
-            return EXIT_SUCCESS;
+         case 0: {
+            const char* name = long_options[ long_index ].name;
+            if( strcmp( name, "help" ) == 0 ) {
+               print_help();
+               return EXIT_SUCCESS;
+            }
+            if( strcmp( name, "version" ) == 0 ) {
+               print_version();
+               return EXIT_SUCCESS;
+            }
+            exit( EXIT_FAILURE );
+         }
          default:
             fprintf( stderr, "Try '%s --help' for more information.\n", prg );
             exit( EXIT_FAILURE );
