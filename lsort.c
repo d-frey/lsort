@@ -252,7 +252,7 @@ int main( int argc, char** argv )
       char* msync_end = NULL;
 
       while( ( status == 0 ) && ( current != end ) ) {
-         if( !quiet && ( ( cnt++ % 65536 ) == 0 ) ) {
+         if( !quiet && ( ( cnt++ % 256 ) == 0 ) ) {
             size_t npc = 100 * ( current - data ) / ( end - data );
             if( npc != pc ) {
                fprintf( stdout, "\r%s: %lu%%", filename, npc );
