@@ -48,13 +48,19 @@ size_t compare = 0;
 size_t distance = 0;
 int quiet = 0;
 
-size_t calccmpsize( size_t a, size_t b )
+size_t zmin( size_t a, size_t b )
 {
-   size_t m = ( a < b ) ? a : b;
-   if( ( compare > 0 ) && ( m > compare ) ) {
-      return compare;
-   }
-   return m;
+   return ( a == 0 ) ? b : ( ( a < b ) ? a : b );
+}
+
+char* cmin( char* a, char* b )
+{
+   return ( a == NULL ) ? b : ( ( a < b ) ? a : b );
+}
+
+char* cmax( char* a, char* b )
+{
+   return ( a == NULL ) ? b : ( ( a > b ) ? a : b );
 }
 
 #ifndef _GNU_SOURCE
@@ -242,6 +248,8 @@ int main( int argc, char** argv )
       size_t ts = 0;
       size_t pc = 1000;
       size_t cnt = 0;
+      char* msync_begin = NULL;
+      char* msync_end = NULL;
 
       while( ( status == 0 ) && ( current != end ) ) {
          if( !quiet && ( ( cnt++ % 65536 ) == 0 ) ) {
@@ -254,10 +262,10 @@ int main( int argc, char** argv )
          }
 
          char* next = find( current, end );
-         if( memcmp( prev, current, calccmpsize( current - prev, next - current ) ) > 0 ) {
+         if( memcmp( prev, current, zmin( compare, zmin( current - prev, next - current ) ) ) > 0 ) {
             while( ( status == 0 ) && ( prev != data ) ) {
                char* peek = rfind( data, prev );
-               if( memcmp( peek, current, calccmpsize( prev - peek, next - current ) ) > 0 ) {
+               if( memcmp( peek, current, zmin( compare, zmin( prev - peek, next - current ) ) ) > 0 ) {
                   prev = peek;
                }
                else {
@@ -294,14 +302,26 @@ int main( int argc, char** argv )
             }
             memmove( prev + s, prev, current - prev - 1 );
             memcpy( prev, tmp, s );
-            msync( prev, next - prev, MS_ASYNC );
+            msync_begin = cmin( msync_begin, prev );
+            msync_end = cmin( msync_end, next );
             current = next - ( current - prev );
             prev = rfind( data, current );
          }
          else {
+            if( msync_begin != NULL ) {
+               msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
+               msync_begin = NULL;
+               msync_end = NULL;
+            }
             prev = current;
             current = next;
          }
+      }
+
+      if( msync_begin != NULL ) {
+         msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
+         msync_begin = NULL;
+         msync_end = NULL;
       }
 
       munmap( data, size );
