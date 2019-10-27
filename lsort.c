@@ -250,6 +250,7 @@ int main( int argc, char** argv )
       size_t cnt = 0;
       char* msync_begin = NULL;
       char* msync_end = NULL;
+      size_t line = 2;
 
       while( ( status == 0 ) && ( current != end ) ) {
          if( !quiet && ( ( cnt++ % 256 ) == 0 ) ) {
@@ -264,6 +265,17 @@ int main( int argc, char** argv )
          char* next = find( current, end );
          if( memcmp( prev, current, zmin( compare, zmin( current - prev, next - current ) ) ) > 0 ) {
             while( ( status == 0 ) && ( prev != data ) ) {
+               size_t final = next - prev;
+               if( ( distance != 0 ) && ( final > distance ) ) {
+                  if( !quiet ) {
+                     putchar( '\n' );
+                  }
+                  fprintf( stderr, "%s:%lu: Distance exceeds allowed maximum of %lu\n", filename, line, distance );
+                  munmap( data, size );
+                  close( fd );
+                  exit( EXIT_FAILURE );
+               }
+
                char* peek = rfind( data, prev );
                if( memcmp( peek, current, zmin( compare, zmin( prev - peek, next - current ) ) ) > 0 ) {
                   prev = peek;
@@ -272,6 +284,7 @@ int main( int argc, char** argv )
                   break;
                }
             }
+
             size_t s = next - current;
             if( s + 1 > ts ) {
                ts = s + 1;
@@ -280,48 +293,35 @@ int main( int argc, char** argv )
                   if( !quiet ) {
                      putchar( '\n' );
                   }
-                  fprintf( stderr, "%s: Out of memory\n", prg );
+                  fprintf( stderr, "%s:%lu: Out of memory reserving %ld bytes\n", filename, line, s + 1 );
                   munmap( data, size );
                   close( fd );
                   exit( EXIT_FAILURE );
                }
             }
-            size_t final = current - prev;
-            if( ( distance != 0 ) && ( final > distance ) ) {
-               if( !quiet ) {
-                  putchar( '\n' );
-               }
-               fprintf( stderr, "%s: Required distance of %lu exceeds allowed distance of %lu\n", prg, final, distance );
-               munmap( data, size );
-               close( fd );
-               exit( EXIT_FAILURE );
-            }
+
             memcpy( tmp, current, s );
             if( tmp[ s - 1 ] != '\n' ) {
                tmp[ s++ ] = '\n';
             }
             memmove( prev + s, prev, current - prev - 1 );
             memcpy( prev, tmp, s );
+
             msync_begin = cmin( msync_begin, prev );
             msync_end = cmin( msync_end, next );
-            current = next - ( current - prev );
-            prev = rfind( data, current );
          }
-         else {
-            if( msync_begin != NULL ) {
-               msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
-               msync_begin = NULL;
-               msync_end = NULL;
-            }
-            prev = current;
-            current = next;
+         else if( msync_begin != NULL ) {
+            msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
+            msync_begin = NULL;
+            msync_end = NULL;
          }
+         prev = current;
+         current = next;
+         ++line;
       }
 
       if( msync_begin != NULL ) {
          msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
-         msync_begin = NULL;
-         msync_end = NULL;
       }
 
       munmap( data, size );
