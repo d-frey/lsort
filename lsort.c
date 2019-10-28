@@ -285,6 +285,15 @@ int main( int argc, char** argv )
                }
             }
 
+            char* new_begin = cmin( msync_begin, prev );
+            char* new_end = cmin( msync_end, next );
+            size_t new_size = new_end - new_begin;
+            if( ( distance != 0 ) && ( new_size > distance ) ) {
+               msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
+               new_begin = prev;
+               new_end = next;
+            }
+
             size_t s = next - current;
             if( s + 1 > ts ) {
                ts = s + 1;
@@ -307,8 +316,8 @@ int main( int argc, char** argv )
             memmove( prev + s, prev, current - prev - 1 );
             memcpy( prev, tmp, s );
 
-            msync_begin = cmin( msync_begin, prev );
-            msync_end = cmin( msync_end, next );
+            msync_begin = new_begin;
+            msync_end = new_end;
          }
          else if( msync_begin != NULL ) {
             msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
