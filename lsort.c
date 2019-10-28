@@ -44,11 +44,6 @@ void print_help()
             prg );
 }
 
-size_t zmin( size_t a, size_t b )
-{
-   return ( a == 0 ) ? b : ( ( a < b ) ? a : b );
-}
-
 char* cmin( char* a, char* b )
 {
    return ( a == NULL ) ? b : ( ( a < b ) ? a : b );
@@ -59,7 +54,7 @@ char* cmax( char* a, char* b )
    return ( a == NULL ) ? b : ( ( a > b ) ? a : b );
 }
 
-int lt( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end, size_t compare )
+int ge( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end, size_t compare )
 {
    if( ( lhs_end != lhs_begin ) && ( *( lhs_end - 1 ) == '\n' ) ) {
       --lhs_end;
@@ -69,15 +64,18 @@ int lt( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end, size_t c
    }
    size_t lhs_size = lhs_end - lhs_begin;
    size_t rhs_size = rhs_end - rhs_begin;
-   size_t size = zmin( compare, zmin( lhs_size, rhs_size ) );
+   size_t size = ( lhs_size < rhs_size ) ? lhs_size : rhs_size;
+   if( ( compare != 0 ) && ( size > compare ) ) {
+      size = compare;
+   }
    int r = memcmp( lhs_begin, rhs_begin, size );
    if( r != 0 ) {
       return r < 0;
    }
-   if( ( compare == 0 ) || ( size < compare ) ) {
-      return lhs_size < rhs_size;
+   if( ( compare != 0 ) && ( size == compare ) ) {
+      return 1;
    }
-   return 0;
+   return lhs_size <= rhs_size;
 }
 
 #ifndef _GNU_SOURCE
@@ -284,7 +282,7 @@ int main( int argc, char** argv )
          }
 
          char* next = find( current, end );
-         if( !lt( prev, current, current, next, compare ) ) {
+         if( !ge( prev, current, current, next, compare ) ) {
             while( ( status == 0 ) && ( prev != data ) ) {
                size_t final = next - prev;
                if( ( distance != 0 ) && ( final > distance ) ) {
@@ -298,7 +296,7 @@ int main( int argc, char** argv )
                }
 
                char* peek = rfind( data, prev );
-               if( !lt( peek, prev, current, next, compare ) ) {
+               if( !ge( peek, prev, current, next, compare ) ) {
                   prev = peek;
                }
                else {
@@ -307,7 +305,7 @@ int main( int argc, char** argv )
             }
 
             char* new_begin = cmin( msync_begin, prev );
-            char* new_end = cmin( msync_end, next );
+            char* new_end = cmax( msync_end, next );
             size_t new_size = new_end - new_begin;
             if( ( distance != 0 ) && ( new_size > distance ) ) {
                msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
