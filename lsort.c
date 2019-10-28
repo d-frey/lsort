@@ -59,6 +59,27 @@ char* cmax( char* a, char* b )
    return ( a == NULL ) ? b : ( ( a > b ) ? a : b );
 }
 
+int lt( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end, size_t compare )
+{
+   if( ( lhs_end != lhs_begin ) && ( *( lhs_end - 1 ) == '\n' ) ) {
+      --lhs_end;
+   }
+   if( ( rhs_end != rhs_begin ) && ( *( rhs_end - 1 ) == '\n' ) ) {
+      --rhs_end;
+   }
+   size_t lhs_size = lhs_end - lhs_begin;
+   size_t rhs_size = rhs_end - rhs_begin;
+   size_t size = zmin( compare, zmin( lhs_size, rhs_size ) );
+   int r = memcmp( lhs_begin, rhs_begin, size );
+   if( r != 0 ) {
+      return r < 0;
+   }
+   if( ( compare == 0 ) || ( size < compare ) ) {
+      return lhs_size < rhs_size;
+   }
+   return 0;
+}
+
 #ifndef _GNU_SOURCE
 void* memrchr( void* s, int c, size_t n )
 {
@@ -263,7 +284,7 @@ int main( int argc, char** argv )
          }
 
          char* next = find( current, end );
-         if( memcmp( prev, current, zmin( compare, zmin( current - prev, next - current ) ) ) > 0 ) {
+         if( !lt( prev, current, current, next, compare ) ) {
             while( ( status == 0 ) && ( prev != data ) ) {
                size_t final = next - prev;
                if( ( distance != 0 ) && ( final > distance ) ) {
@@ -277,7 +298,7 @@ int main( int argc, char** argv )
                }
 
                char* peek = rfind( data, prev );
-               if( memcmp( peek, current, zmin( compare, zmin( prev - peek, next - current ) ) ) > 0 ) {
+               if( !lt( peek, prev, current, next, compare ) ) {
                   prev = peek;
                }
                else {
@@ -318,6 +339,8 @@ int main( int argc, char** argv )
 
             msync_begin = new_begin;
             msync_end = new_end;
+
+            current = rfind( data, next );
          }
          else if( msync_begin != NULL ) {
             msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
