@@ -54,7 +54,7 @@ char* cmax( char* a, char* b )
    return ( a == NULL ) ? b : ( ( a > b ) ? a : b );
 }
 
-int ge( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end, size_t compare )
+int ge( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end, size_t max_compare )
 {
    if( ( lhs_end != lhs_begin ) && ( *( lhs_end - 1 ) == '\n' ) ) {
       --lhs_end;
@@ -65,14 +65,14 @@ int ge( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end, size_t c
    const size_t lhs_size = lhs_end - lhs_begin;
    const size_t rhs_size = rhs_end - rhs_begin;
    size_t size = ( lhs_size < rhs_size ) ? lhs_size : rhs_size;
-   if( ( compare != 0 ) && ( size > compare ) ) {
-      size = compare;
+   if( ( max_compare != 0 ) && ( size > max_compare ) ) {
+      size = max_compare;
    }
    int r = memcmp( lhs_begin, rhs_begin, size );
    if( r != 0 ) {
       return r < 0;
    }
-   if( ( compare != 0 ) && ( size == compare ) ) {
+   if( ( max_compare != 0 ) && ( size == max_compare ) ) {
       return 1;
    }
    return lhs_size <= rhs_size;
@@ -174,8 +174,8 @@ int main( int argc, char** argv )
    signal( SIGTERM, stop );
    signal( SIGINT, stop );
 
-   size_t compare = 0;
-   size_t distance = 0;
+   size_t max_compare = 0;
+   size_t max_distance = 0;
    int quiet = 0;
 
    prg = argv[ 0 ];
@@ -195,10 +195,10 @@ int main( int argc, char** argv )
    while( ( opt = getopt_long( argc, argv, "c:d:q", long_options, &long_index ) ) != -1 ) {
       switch( opt ) {
          case 'c':
-            compare = parse( optarg );
+            max_compare = parse( optarg );
             break;
          case 'd':
-            distance = parse( optarg );
+            max_distance = parse( optarg );
             break;
          case 'q':
             quiet = 1;
@@ -284,15 +284,15 @@ int main( int argc, char** argv )
          }
 
          char* next = find( current, end );
-         if( !ge( prev, current, current, next, compare ) ) {
+         if( !ge( prev, current, current, next, max_compare ) ) {
             while( ( status == 0 ) && ( prev != data ) ) {
-               if( distance != 0 ) {
-                  const size_t final = next - prev;
-                  if( final > distance ) {
+               if( max_distance != 0 ) {
+                  const size_t distance = next - prev;
+                  if( distance > max_distance ) {
                      if( !quiet ) {
                         putchar( '\n' );
                      }
-                     fprintf( stderr, "%s:%lu: Distance exceeds allowed maximum of %lu\n", filename, line, distance );
+                     fprintf( stderr, "%s:%lu: Distance exceeds allowed maximum of %lu\n", filename, line, max_distance );
                      munmap( data, size );
                      close( fd );
                      exit( EXIT_FAILURE );
@@ -300,7 +300,7 @@ int main( int argc, char** argv )
                }
 
                char* const peek = rfind( data, prev );
-               if( !ge( peek, prev, current, next, compare ) ) {
+               if( !ge( peek, prev, current, next, max_compare ) ) {
                   prev = peek;
                }
                else {
@@ -311,36 +311,36 @@ int main( int argc, char** argv )
             char* new_begin = cmin( msync_begin, prev );
             char* new_end = cmax( msync_end, next );
 
-            if( distance != 0 ) {
+            if( max_distance != 0 ) {
                const size_t new_size = new_end - new_begin;
-               if( new_size > distance ) {
+               if( new_size > max_distance ) {
                   msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
                   new_begin = prev;
                   new_end = next;
                }
             }
 
-            size_t s = next - current;
-            if( bufsize < s + 1 ) {
-               bufsize = s + 1;
+            size_t current_size = next - current;
+            if( bufsize < current_size + 1 ) {
+               bufsize = current_size + 1;
                buffer = (char*)realloc( buffer, bufsize );
                if( buffer == NULL ) {
                   if( !quiet ) {
                      putchar( '\n' );
                   }
-                  fprintf( stderr, "%s:%lu: Out of memory reserving %ld bytes\n", filename, line, s + 1 );
+                  fprintf( stderr, "%s:%lu: Out of memory reserving %ld bytes\n", filename, line, current_size + 1 );
                   munmap( data, size );
                   close( fd );
                   exit( EXIT_FAILURE );
                }
             }
 
-            memcpy( buffer, current, s );
-            if( buffer[ s - 1 ] != '\n' ) {
-               buffer[ s++ ] = '\n';
+            memcpy( buffer, current, current_size );
+            if( buffer[ current_size - 1 ] != '\n' ) {
+               buffer[ current_size++ ] = '\n';
             }
-            memmove( prev + s, prev, current - prev - 1 );
-            memcpy( prev, buffer, s );
+            memmove( prev + current_size, prev, current - prev - 1 );
+            memcpy( prev, buffer, current_size );
 
             msync_begin = new_begin;
             msync_end = new_end;
