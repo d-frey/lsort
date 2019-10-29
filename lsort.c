@@ -260,7 +260,8 @@ int main( int argc, char** argv )
          exit( EXIT_FAILURE );
       }
 
-      char* end = data + size;
+      char* const end = data + size;
+
       char* prev = data;
       char* current = find( prev, end );
 
