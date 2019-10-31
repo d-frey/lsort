@@ -302,9 +302,7 @@ int main( int argc, char** argv )
                         putchar( '\n' );
                      }
                      fprintf( stderr, "%s:%lu: Distance exceeds allowed maximum of %lu\n", filename, line, max_distance );
-                     munmap( data, size );
-                     close( fd );
-                     exit( EXIT_FAILURE );
+                     goto exit_with_error;
                   }
                }
 
@@ -337,10 +335,8 @@ int main( int argc, char** argv )
                   if( !quiet ) {
                      putchar( '\n' );
                   }
-                  fprintf( stderr, "%s:%lu: Out of memory reserving %ld bytes\n", filename, line, current_size + 1 );
-                  munmap( data, size );
-                  close( fd );
-                  exit( EXIT_FAILURE );
+                  fprintf( stderr, "%s:%lu: Out of memory reserving %ld bytes\n", filename, line, bufsize );
+                  goto exit_with_error;
                }
             }
 
@@ -376,6 +372,15 @@ int main( int argc, char** argv )
       if( ( status == 0 ) && !quiet ) {
          fprintf( stdout, "\r%s: done\n", filename );
       }
+      continue;
+
+   exit_with_error:
+      if( msync_begin != NULL ) {
+         msync( msync_begin, msync_end - msync_begin, msync_mode );
+      }
+      munmap( data, size );
+      close( fd );
+      exit( EXIT_FAILURE );
    }
 
    if( status != 0 ) {
