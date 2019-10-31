@@ -29,6 +29,7 @@ void print_help()
                     "Options:\n"
                     "  -c, --compare N            compare no more than N characters per line\n"
                     "  -d, --distance N           maximum shift distance in bytes, default: 1M\n"
+                    "      --sync                 use synchronous writes\n"
                     "\n"
                     "  -q, --quiet                suppress progress output\n"
                     "      --help                 display this help and exit\n"
@@ -54,7 +55,8 @@ char* cmax( char* a, char* b )
    return ( a == NULL ) ? b : ( ( a > b ) ? a : b );
 }
 
-int ge( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end, size_t max_compare )
+// lhs <= rhs
+int le( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end, size_t max_compare )
 {
    if( ( lhs_end != lhs_begin ) && ( *( lhs_end - 1 ) == '\n' ) ) {
       --lhs_end;
@@ -177,6 +179,7 @@ int main( int argc, char** argv )
    size_t max_compare = 0;
    size_t max_distance = 0;
    int quiet = 0;
+   int msync_mode = MS_ASYNC;
 
    prg = argv[ 0 ];
    quiet = !isatty( fileno( stdout ) );
@@ -184,6 +187,7 @@ int main( int argc, char** argv )
    static struct option long_options[] = {
       { "compare", required_argument, NULL, 'c' },
       { "distance", required_argument, NULL, 'd' },
+      { "sync", no_argument, NULL, 0 },
       { "quiet", no_argument, NULL, 'q' },
       { "help", no_argument, NULL, 0 },
       { "version", no_argument, NULL, 0 },
@@ -205,6 +209,10 @@ int main( int argc, char** argv )
             break;
          case 0: {
             const char* name = long_options[ long_index ].name;
+            if( strcmp( name, "sync" ) == 0 ) {
+               msync_mode = MS_SYNC;
+               break;
+            }
             if( strcmp( name, "help" ) == 0 ) {
                print_help();
                return EXIT_SUCCESS;
@@ -285,7 +293,7 @@ int main( int argc, char** argv )
          }
 
          char* next = find( current, end );
-         if( !ge( prev, current, current, next, max_compare ) ) {
+         if( !le( prev, current, current, next, max_compare ) ) {
             while( ( status == 0 ) && ( prev != data ) ) {
                if( max_distance != 0 ) {
                   const size_t distance = next - prev;
@@ -301,7 +309,7 @@ int main( int argc, char** argv )
                }
 
                char* const peek = rfind( data, prev );
-               if( !ge( peek, prev, current, next, max_compare ) ) {
+               if( !le( peek, prev, current, next, max_compare ) ) {
                   prev = peek;
                }
                else {
@@ -315,7 +323,7 @@ int main( int argc, char** argv )
             if( max_distance != 0 ) {
                const size_t new_size = new_end - new_begin;
                if( new_size > max_distance ) {
-                  msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
+                  msync( msync_begin, msync_end - msync_begin, msync_mode );
                   new_begin = prev;
                   new_end = next;
                }
@@ -349,7 +357,7 @@ int main( int argc, char** argv )
             current = rfind( data, next );
          }
          else if( msync_begin != NULL ) {
-            msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
+            msync( msync_begin, msync_end - msync_begin, msync_mode );
             msync_begin = NULL;
             msync_end = NULL;
          }
@@ -359,7 +367,7 @@ int main( int argc, char** argv )
       }
 
       if( msync_begin != NULL ) {
-         msync( msync_begin, msync_end - msync_begin, MS_ASYNC );
+         msync( msync_begin, msync_end - msync_begin, msync_mode );
       }
 
       munmap( data, size );
