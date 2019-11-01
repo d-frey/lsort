@@ -307,7 +307,7 @@ int main( int argc, char** argv )
 
          char* next = find( current, end );
          if( !le( prev, current, current, next ) ) {
-            size_t prev_line = line;
+            size_t prev_line = line - 1;
             while( ( status == 0 ) && ( prev != data ) ) {
                if( max_distance != 0 ) {
                   const size_t distance = next - prev;
@@ -320,11 +320,10 @@ int main( int argc, char** argv )
                   }
                }
 
-               --prev_line;
-
                char* const peek = rfind( data, prev );
                if( !le( peek, prev, current, next ) ) {
                   prev = peek;
+                  --prev_line;
                }
                else {
                   break;
@@ -397,9 +396,8 @@ int main( int argc, char** argv )
                memmove( prev + current_size, prev, prev_size - 1 );
                memcpy( prev, buffer, current_size );
 
-               prev = rfind( data, next );
-               current = next;
-               ++line;
+               current = rfind( data, next );
+               prev = rfind( data, current );
             }
             else {
                if( verbose ) {
@@ -408,8 +406,11 @@ int main( int argc, char** argv )
                }
 
                memcpy( buffer, prev, prev_size );
-               memmove( prev, prev + prev_size, current_size - 1 );
-               memcpy( prev + prev_size, buffer, prev_size - 1 );
+               memmove( prev, prev + prev_size, current_size );
+               if( prev[ current_size - 1 ] != '\n' ) {
+                  prev[ current_size++ ] = '\n';
+               }
+               memcpy( prev + current_size, buffer, prev_size - 1 );
 
                current = find( prev, end );
             }
