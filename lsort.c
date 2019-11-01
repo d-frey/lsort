@@ -16,6 +16,15 @@
 
 char* prg;
 
+size_t max_compare = 0;
+size_t max_distance = 0;
+int quiet = 0;
+int verbose = 0;
+int msync_mode = MS_ASYNC;
+
+char* buffer = NULL;
+size_t bufsize = 0;
+
 void print_version()
 {
    fprintf( stdout, "%s 0.0.1\n", prg );
@@ -32,6 +41,7 @@ void print_help()
                     "      --sync                 use synchronous writes\n"
                     "\n"
                     "  -q, --quiet                suppress progress output\n"
+                    "  -v, --verbose              report changes to the file\n"
                     "      --help                 display this help and exit\n"
                     "      --version              output version information and exit\n"
                     "\n"
@@ -56,7 +66,7 @@ char* cmax( char* a, char* b )
 }
 
 // lhs <= rhs
-int le( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end, size_t max_compare )
+int le( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end )
 {
    if( ( lhs_end != lhs_begin ) && ( *( lhs_end - 1 ) == '\n' ) ) {
       --lhs_end;
@@ -176,11 +186,6 @@ int main( int argc, char** argv )
    signal( SIGTERM, stop );
    signal( SIGINT, stop );
 
-   size_t max_compare = 0;
-   size_t max_distance = 0;
-   int quiet = 0;
-   int msync_mode = MS_ASYNC;
-
    prg = argv[ 0 ];
    quiet = !isatty( fileno( stdout ) );
 
@@ -189,6 +194,7 @@ int main( int argc, char** argv )
       { "distance", required_argument, NULL, 'd' },
       { "sync", no_argument, NULL, 0 },
       { "quiet", no_argument, NULL, 'q' },
+      { "verbose", no_argument, NULL, 'v' },
       { "help", no_argument, NULL, 0 },
       { "version", no_argument, NULL, 0 },
       { NULL, 0, NULL, 0 }
@@ -196,7 +202,7 @@ int main( int argc, char** argv )
 
    int opt = 0;
    int long_index = 0;
-   while( ( opt = getopt_long( argc, argv, "c:d:q", long_options, &long_index ) ) != -1 ) {
+   while( ( opt = getopt_long( argc, argv, "c:d:qv", long_options, &long_index ) ) != -1 ) {
       switch( opt ) {
          case 'c':
             max_compare = parse( optarg );
@@ -206,6 +212,11 @@ int main( int argc, char** argv )
             break;
          case 'q':
             quiet = 1;
+            verbose = 0;
+            break;
+         case 'v':
+            verbose = 1;
+            quiet = 0;
             break;
          case 0: {
             const char* name = long_options[ long_index ].name;
@@ -276,9 +287,6 @@ int main( int argc, char** argv )
       size_t line = 2;
       size_t last_progress = 1000;
 
-      char* buffer = NULL;
-      size_t bufsize = 0;
-
       char* msync_begin = NULL;
       char* msync_end = NULL;
 
@@ -293,7 +301,8 @@ int main( int argc, char** argv )
          }
 
          char* next = find( current, end );
-         if( !le( prev, current, current, next, max_compare ) ) {
+         if( !le( prev, current, current, next ) ) {
+            size_t prev_line = line;
             while( ( status == 0 ) && ( prev != data ) ) {
                if( max_distance != 0 ) {
                   const size_t distance = next - prev;
@@ -306,8 +315,10 @@ int main( int argc, char** argv )
                   }
                }
 
+               --prev_line;
+
                char* const peek = rfind( data, prev );
-               if( !le( peek, prev, current, next, max_compare ) ) {
+               if( !le( peek, prev, current, next ) ) {
                   prev = peek;
                }
                else {
@@ -338,6 +349,11 @@ int main( int argc, char** argv )
                   fprintf( stderr, "%s:%lu: Out of memory reserving %ld bytes\n", filename, line, bufsize );
                   goto exit_with_error;
                }
+            }
+
+            if( verbose ) {
+               fprintf( stdout, "\r%s:%lu: moved back to line %lu\n\r%s: %lu%%", filename, line, prev_line, filename, last_progress );
+               fflush( stdout );
             }
 
             memcpy( buffer, current, current_size );
