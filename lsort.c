@@ -55,6 +55,11 @@ void print_help()
             prg );
 }
 
+size_t zmin( size_t a, size_t b )
+{
+   return ( a < b ) ? a : b;
+}
+
 char* cmin( char* a, char* b )
 {
    return ( a == NULL ) ? b : ( ( a < b ) ? a : b );
@@ -76,7 +81,7 @@ int le( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end )
    }
    const size_t lhs_size = lhs_end - lhs_begin;
    const size_t rhs_size = rhs_end - rhs_begin;
-   size_t size = ( lhs_size < rhs_size ) ? lhs_size : rhs_size;
+   size_t size = zmin( lhs_size, rhs_size );
    if( ( max_compare != 0 ) && ( size > max_compare ) ) {
       size = max_compare;
    }
@@ -326,6 +331,31 @@ int main( int argc, char** argv )
                }
             }
 
+            size_t next_line = line;
+            if( prev_line + 1 == line ) {
+               while( ( status == 0 ) && ( next != end ) ) {
+                  if( max_distance != 0 ) {
+                     const size_t distance = next - prev;
+                     if( distance > max_distance ) {
+                        if( !quiet ) {
+                           putchar( '\n' );
+                        }
+                        fprintf( stderr, "%s:%lu: Distance exceeds allowed maximum of %lu\n", filename, line, max_distance );
+                        goto exit_with_error;
+                     }
+                  }
+
+                  char* const peek = find( next, end );
+                  if( !le( prev, current, next, peek ) ) {
+                     next = peek;
+                     ++next_line;
+                  }
+                  else {
+                     break;
+                  }
+               }
+            }
+
             char* new_begin = cmin( msync_begin, prev );
             char* new_end = cmax( msync_end, next );
 
@@ -338,9 +368,12 @@ int main( int argc, char** argv )
                }
             }
 
+            size_t prev_size = current - prev;
             size_t current_size = next - current;
-            if( bufsize < current_size + 1 ) {
-               bufsize = current_size + 1;
+
+            size_t required_bufsize = zmin( prev_size, current_size ) + 1;
+            if( bufsize < required_bufsize ) {
+               bufsize = required_bufsize;
                buffer = (char*)realloc( buffer, bufsize );
                if( buffer == NULL ) {
                   if( !quiet ) {
@@ -351,31 +384,49 @@ int main( int argc, char** argv )
                }
             }
 
-            if( verbose ) {
-               fprintf( stdout, "\r%s:%lu: moved back to line %lu\n\r%s: %lu%%", filename, line, prev_line, filename, last_progress );
-               fflush( stdout );
-            }
+            if( current_size <= prev_size ) {
+               if( verbose ) {
+                  fprintf( stdout, "\r%s:%lu: moved back to line %lu\n\r%s: %lu%%", filename, line, prev_line, filename, last_progress );
+                  fflush( stdout );
+               }
 
-            memcpy( buffer, current, current_size );
-            if( buffer[ current_size - 1 ] != '\n' ) {
-               buffer[ current_size++ ] = '\n';
+               memcpy( buffer, current, current_size );
+               if( buffer[ current_size - 1 ] != '\n' ) {
+                  buffer[ current_size++ ] = '\n';
+               }
+               memmove( prev + current_size, prev, prev_size - 1 );
+               memcpy( prev, buffer, current_size );
+
+               prev = rfind( data, next );
+               current = next;
+               ++line;
             }
-            memmove( prev + current_size, prev, current - prev - 1 );
-            memcpy( prev, buffer, current_size );
+            else {
+               if( verbose ) {
+                  fprintf( stdout, "\r%s:%lu: moved forward to line %lu\n\r%s: %lu%%", filename, prev_line, next_line, filename, last_progress );
+                  fflush( stdout );
+               }
+
+               memcpy( buffer, prev, prev_size );
+               memmove( prev, prev + prev_size, current_size - 1 );
+               memcpy( prev + prev_size, buffer, prev_size - 1 );
+
+               current = find( prev, end );
+            }
 
             msync_begin = new_begin;
             msync_end = new_end;
-
-            current = rfind( data, next );
          }
-         else if( msync_begin != NULL ) {
-            msync( msync_begin, msync_end - msync_begin, msync_mode );
-            msync_begin = NULL;
-            msync_end = NULL;
+         else {
+            if( msync_begin != NULL ) {
+               msync( msync_begin, msync_end - msync_begin, msync_mode );
+               msync_begin = NULL;
+               msync_end = NULL;
+            }
+            prev = current;
+            current = next;
+            ++line;
          }
-         prev = current;
-         current = next;
-         ++line;
       }
 
       if( msync_begin != NULL ) {
