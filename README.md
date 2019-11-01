@@ -8,6 +8,7 @@ Options:
       --sync                 use synchronous writes
 
   -q, --quiet                suppress progress output
+  -v, --verbose              report changes to the file
       --help                 display this help and exit
       --version              output version information and exit
 
