@@ -365,10 +365,10 @@ int main( int argc, char** argv )
                }
             }
 
-            size_t prev_size = current - prev;
+            const size_t prev_size = current - prev;
             size_t current_size = next - current;
 
-            size_t required_bufsize = zmin( prev_size, current_size ) + 1;
+            const size_t required_bufsize = zmin( prev_size, current_size + 1 );
             if( bufsize < required_bufsize ) {
                bufsize = required_bufsize;
                buffer = (char*)realloc( buffer, bufsize );
