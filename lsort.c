@@ -85,9 +85,9 @@ int le( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end )
    if( ( max_compare != 0 ) && ( size > max_compare ) ) {
       size = max_compare;
    }
-   int r = memcmp( lhs_begin, rhs_begin, size );
-   if( r != 0 ) {
-      return r < 0;
+   const int result = memcmp( lhs_begin, rhs_begin, size );
+   if( result != 0 ) {
+      return result < 0;
    }
    if( ( max_compare != 0 ) && ( size == max_compare ) ) {
       return 1;
