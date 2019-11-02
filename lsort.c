@@ -217,11 +217,9 @@ int main( int argc, char** argv )
             break;
          case 'q':
             quiet = 1;
-            verbose = 0;
             break;
          case 'v':
             verbose = 1;
-            quiet = 0;
             break;
          case 0: {
             const char* name = long_options[ long_index ].name;
@@ -385,8 +383,11 @@ int main( int argc, char** argv )
 
             if( current_size <= prev_size ) {
                if( verbose ) {
-                  fprintf( stdout, "\r%s:%lu: moved back to line %lu\n\r%s: %lu%%", filename, line, prev_line, filename, last_progress );
-                  fflush( stdout );
+                  fprintf( stdout, "\r%s:%lu: moved back to line %lu\n", filename, line, prev_line );
+                  if( !quiet ) {
+                     fprintf( stdout, "%s: %lu%%", filename, last_progress );
+                     fflush( stdout );
+                  }
                }
 
                memcpy( buffer, current, current_size );
@@ -401,8 +402,11 @@ int main( int argc, char** argv )
             }
             else {
                if( verbose ) {
-                  fprintf( stdout, "\r%s:%lu: moved forward to line %lu\n\r%s: %lu%%", filename, prev_line, next_line, filename, last_progress );
-                  fflush( stdout );
+                  fprintf( stdout, "\r%s:%lu: moved forward to line %lu\n", filename, prev_line, next_line );
+                  if( !quiet ) {
+                     fprintf( stdout, "%s: %lu%%", filename, last_progress );
+                     fflush( stdout );
+                  }
                }
 
                memcpy( buffer, prev, prev_size );
