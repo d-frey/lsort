@@ -376,7 +376,7 @@ int main( int argc, char** argv )
                   if( !quiet ) {
                      putchar( '\n' );
                   }
-                  fprintf( stderr, "%s:%lu: Out of memory reserving %ld bytes\n", filename, line, bufsize );
+                  fprintf( stderr, "%s:%lu: Out of memory reserving %lu bytes\n", filename, line, bufsize );
                   goto exit_with_error;
                }
             }
