@@ -293,7 +293,7 @@ int main( int argc, char** argv )
       char* prev = data;
       char* current = find( prev, end );
 
-      size_t line = 2;
+      size_t current_line = 2;
       size_t last_progress = 1000;
 
       char* msync_begin = NULL;
@@ -311,7 +311,7 @@ int main( int argc, char** argv )
 
          char* next = find( current, end );
          if( !le( prev, current, current, next ) ) {
-            size_t prev_line = line - 1;
+            size_t prev_line = current_line - 1;
             while( ( status == 0 ) && ( prev != data ) ) {
                if( max_distance != 0 ) {
                   const size_t distance = next - prev;
@@ -319,7 +319,7 @@ int main( int argc, char** argv )
                      if( !quiet ) {
                         putchar( '\n' );
                      }
-                     fprintf( stderr, "%s:%lu: Backward distance exceeds allowed maximum of %lu\n", filename, line, max_distance );
+                     fprintf( stderr, "%s:%lu: Backward distance exceeds allowed maximum of %lu\n", filename, current_line, max_distance );
                      goto exit_with_error;
                   }
                }
@@ -334,8 +334,8 @@ int main( int argc, char** argv )
                }
             }
 
-            size_t next_line = line;
-            if( prev_line + 1 == line ) {
+            size_t next_line = current_line;
+            if( prev_line + 1 == current_line ) {
                while( ( status == 0 ) && ( next != end ) ) {
                   if( max_distance != 0 ) {
                      const size_t distance = next - prev;
@@ -360,8 +360,8 @@ int main( int argc, char** argv )
             }
 
             if( verbose ) {
-               if( next_line == line ) {
-                  fprintf( stdout, "\r%s:%lu: move back to %lu\n", filename, line, prev_line );
+               if( next_line == current_line ) {
+                  fprintf( stdout, "\r%s:%lu: move back to %lu\n", filename, current_line, prev_line );
                }
                else {
                   fprintf( stdout, "\r%s:%lu: move forward to %lu\n", filename, prev_line, next_line );
@@ -395,7 +395,7 @@ int main( int argc, char** argv )
                   if( !quiet ) {
                      putchar( '\n' );
                   }
-                  fprintf( stderr, "%s:%lu: Out of memory reserving %lu bytes\n", filename, line, bufsize );
+                  fprintf( stderr, "%s:%lu: Out of memory reserving %lu bytes\n", filename, current_line, bufsize );
                   goto exit_with_error;
                }
             }
@@ -420,14 +420,14 @@ int main( int argc, char** argv )
             msync_begin = new_begin;
             msync_end = new_end;
 
-            if( next_line == line ) {
+            if( next_line == current_line ) {
                current = next;
                prev = rfind( data, current );
-               ++line;
+               ++current_line;
             }
             else {
                current = find( prev, end );
-               line = prev_line + 1;
+               current_line = prev_line + 1;
             }
          }
          else {
@@ -438,7 +438,7 @@ int main( int argc, char** argv )
             }
             prev = current;
             current = next;
-            ++line;
+            ++current_line;
          }
       }
 
