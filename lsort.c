@@ -18,6 +18,7 @@ char* prg;
 
 size_t max_compare = 0;
 size_t max_distance = 0;
+int reverse = 0;
 int quiet = 0;
 int verbose = 0;
 int msync_mode = MS_ASYNC;
@@ -38,6 +39,7 @@ void print_help()
                     "Options:\n"
                     "  -c, --compare N            compare no more than N characters per line\n"
                     "  -d, --distance N           maximum shift distance in bytes, default: 1M\n"
+                    "  -r, --reverse              reverse sort order\n"
                     "      --sync                 use synchronous writes\n"
                     "\n"
                     "  -q, --quiet                suppress progress output\n"
@@ -87,12 +89,12 @@ int le( char* lhs_begin, char* lhs_end, char* rhs_begin, char* rhs_end )
    }
    const int result = memcmp( lhs_begin, rhs_begin, size );
    if( result != 0 ) {
-      return result < 0;
+      return ( result < 0 ) ? !reverse : reverse;
    }
    if( ( max_compare != 0 ) && ( size == max_compare ) ) {
       return 1;
    }
-   return lhs_size <= rhs_size;
+   return ( lhs_size <= rhs_size ) ? !reverse : reverse;
 }
 
 #ifndef _GNU_SOURCE
@@ -198,6 +200,7 @@ int main( int argc, char** argv )
       { "compare", required_argument, NULL, 'c' },
       { "distance", required_argument, NULL, 'd' },
       { "sync", no_argument, NULL, 0 },
+      { "reverse", no_argument, NULL, 'r' },
       { "quiet", no_argument, NULL, 'q' },
       { "verbose", no_argument, NULL, 'v' },
       { "help", no_argument, NULL, 0 },
@@ -207,13 +210,16 @@ int main( int argc, char** argv )
 
    int opt = 0;
    int long_index = 0;
-   while( ( opt = getopt_long( argc, argv, "c:d:qv", long_options, &long_index ) ) != -1 ) {
+   while( ( opt = getopt_long( argc, argv, "c:d:qrv", long_options, &long_index ) ) != -1 ) {
       switch( opt ) {
          case 'c':
             max_compare = parse( optarg );
             break;
          case 'd':
             max_distance = parse( optarg );
+            break;
+         case 'r':
+            reverse = 1;
             break;
          case 'q':
             quiet = 1;

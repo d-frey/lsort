@@ -5,6 +5,7 @@ Sort almost-sorted FILE(s), works in-place
 Options:
   -c, --compare N            compare no more than N characters per line
   -d, --distance N           maximum shift distance in bytes, default: 1M
+  -r, --reverse              reverse sort order
       --sync                 use synchronous writes
 
   -q, --quiet                suppress progress output
