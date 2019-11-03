@@ -313,7 +313,7 @@ int main( int argc, char** argv )
                      if( !quiet ) {
                         putchar( '\n' );
                      }
-                     fprintf( stderr, "%s:%lu: Distance exceeds allowed maximum of %lu\n", filename, line, max_distance );
+                     fprintf( stderr, "%s:%lu: Backward distance exceeds allowed maximum of %lu\n", filename, line, max_distance );
                      goto exit_with_error;
                   }
                }
@@ -337,7 +337,7 @@ int main( int argc, char** argv )
                         if( !quiet ) {
                            putchar( '\n' );
                         }
-                        fprintf( stderr, "%s:%lu: Distance exceeds allowed maximum of %lu\n", filename, line, max_distance );
+                        fprintf( stderr, "%s:%lu: Forward distance exceeds allowed maximum of %lu\n", filename, prev_line, max_distance );
                         goto exit_with_error;
                      }
                   }
@@ -350,6 +350,19 @@ int main( int argc, char** argv )
                   else {
                      break;
                   }
+               }
+            }
+
+            if( verbose ) {
+               if( next_line == line ) {
+                  fprintf( stdout, "\r%s:%lu: move back to %lu\n", filename, line, prev_line );
+               }
+               else {
+                  fprintf( stdout, "\r%s:%lu: move forward to %lu\n", filename, prev_line, next_line );
+               }
+               if( !quiet ) {
+                  fprintf( stdout, "%s: %lu%%", filename, last_progress );
+                  fflush( stdout );
                }
             }
 
@@ -382,45 +395,34 @@ int main( int argc, char** argv )
             }
 
             if( current_size <= prev_size ) {
-               if( verbose ) {
-                  fprintf( stdout, "\r%s:%lu: moved back to line %lu\n", filename, line, prev_line );
-                  if( !quiet ) {
-                     fprintf( stdout, "%s: %lu%%", filename, last_progress );
-                     fflush( stdout );
-                  }
-               }
-
                memcpy( buffer, current, current_size );
                if( buffer[ current_size - 1 ] != '\n' ) {
                   buffer[ current_size++ ] = '\n';
                }
                memmove( prev + current_size, prev, prev_size - 1 );
                memcpy( prev, buffer, current_size );
-
-               current = rfind( data, next );
-               prev = rfind( data, current );
             }
             else {
-               if( verbose ) {
-                  fprintf( stdout, "\r%s:%lu: moved forward to line %lu\n", filename, prev_line, next_line );
-                  if( !quiet ) {
-                     fprintf( stdout, "%s: %lu%%", filename, last_progress );
-                     fflush( stdout );
-                  }
-               }
-
                memcpy( buffer, prev, prev_size );
                memmove( prev, prev + prev_size, current_size );
                if( prev[ current_size - 1 ] != '\n' ) {
                   prev[ current_size++ ] = '\n';
                }
                memcpy( prev + current_size, buffer, prev_size - 1 );
-
-               current = find( prev, end );
             }
 
             msync_begin = new_begin;
             msync_end = new_end;
+
+            if( next_line == line ) {
+               current = next;
+               prev = rfind( data, current );
+               ++line;
+            }
+            else {
+               current = find( prev, end );
+               line = prev_line + 1;
+            }
          }
          else {
             if( msync_begin != NULL ) {
