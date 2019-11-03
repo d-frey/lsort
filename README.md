@@ -7,6 +7,7 @@ Options:
   -d, --distance N           maximum shift distance in bytes, default: 1M
   -r, --reverse              reverse sort order
       --sync                 use synchronous writes
+      --immediate            disable deferred writes
 
   -q, --quiet                suppress progress output
   -v, --verbose              report changes to the file

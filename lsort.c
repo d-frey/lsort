@@ -19,6 +19,7 @@ char* prg;
 size_t max_compare = 0;
 size_t max_distance = 0;
 int reverse = 0;
+int immediate = 0;
 int quiet = 0;
 int verbose = 0;
 int msync_mode = MS_ASYNC;
@@ -41,6 +42,7 @@ void print_help()
                     "  -d, --distance N           maximum shift distance in bytes, default: 1M\n"
                     "  -r, --reverse              reverse sort order\n"
                     "      --sync                 use synchronous writes\n"
+                    "      --immediate            disable deferred writes\n"
                     "\n"
                     "  -q, --quiet                suppress progress output\n"
                     "  -v, --verbose              report changes to the file\n"
@@ -199,8 +201,9 @@ int main( int argc, char** argv )
    static struct option long_options[] = {
       { "compare", required_argument, NULL, 'c' },
       { "distance", required_argument, NULL, 'd' },
-      { "sync", no_argument, NULL, 0 },
       { "reverse", no_argument, NULL, 'r' },
+      { "sync", no_argument, NULL, 0 },
+      { "immediate", no_argument, NULL, 0 },
       { "quiet", no_argument, NULL, 'q' },
       { "verbose", no_argument, NULL, 'v' },
       { "help", no_argument, NULL, 0 },
@@ -231,6 +234,10 @@ int main( int argc, char** argv )
             const char* name = long_options[ long_index ].name;
             if( strcmp( name, "sync" ) == 0 ) {
                msync_mode = MS_SYNC;
+               break;
+            }
+            if( strcmp( name, "immediate" ) == 0 ) {
+               immediate = 1;
                break;
             }
             if( strcmp( name, "help" ) == 0 ) {
@@ -417,8 +424,13 @@ int main( int argc, char** argv )
                memcpy( prev + current_size, buffer, prev_size - 1 );
             }
 
-            msync_begin = new_begin;
-            msync_end = new_end;
+            if( !immediate ) {
+               msync_begin = new_begin;
+               msync_end = new_end;
+            }
+            else {
+               msync( new_begin, new_end - new_begin, msync_mode );
+            }
 
             if( next_line == current_line ) {
                current = next;
