@@ -8,6 +8,7 @@ Options:
   -r, --reverse              reverse sort order
       --sync                 use synchronous writes
       --immediate            disable deferred writes
+      --dry-run              perform a trial run with no changes made
 
   -q, --quiet                suppress progress output
   -v, --verbose              report changes to the file

@@ -23,6 +23,7 @@ int immediate = 0;
 int quiet = 0;
 int verbose = 0;
 int msync_mode = MS_ASYNC;
+int mmap_flags = MAP_SHARED;
 
 char* buffer = NULL;
 size_t bufsize = 0;
@@ -43,6 +44,7 @@ void print_help()
                     "  -r, --reverse              reverse sort order\n"
                     "      --sync                 use synchronous writes\n"
                     "      --immediate            disable deferred writes\n"
+                    "      --dry-run              perform a trial run with no changes made\n"
                     "\n"
                     "  -q, --quiet                suppress progress output\n"
                     "  -v, --verbose              report changes to the file\n"
@@ -204,6 +206,7 @@ int main( int argc, char** argv )
       { "reverse", no_argument, NULL, 'r' },
       { "sync", no_argument, NULL, 0 },
       { "immediate", no_argument, NULL, 0 },
+      { "dry-run", no_argument, NULL, 0 },
       { "quiet", no_argument, NULL, 'q' },
       { "verbose", no_argument, NULL, 'v' },
       { "help", no_argument, NULL, 0 },
@@ -238,6 +241,10 @@ int main( int argc, char** argv )
             }
             if( strcmp( name, "immediate" ) == 0 ) {
                immediate = 1;
+               break;
+            }
+            if( strcmp( name, "dry-run" ) == 0 ) {
+               mmap_flags = MAP_PRIVATE;
                break;
             }
             if( strcmp( name, "help" ) == 0 ) {
@@ -288,7 +295,7 @@ int main( int argc, char** argv )
          continue;
       }
 
-      char* const data = (char*)mmap( NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0 );
+      char* const data = (char*)mmap( NULL, size, PROT_READ | PROT_WRITE, mmap_flags, fd, 0 );
       if( data == (void*)-1 ) {
          perror( filename );
          close( fd );
